@@ -61,6 +61,11 @@ function main() {
 
   poller.start().then(() => {
     process.exit(0);
+  }).catch((err) => {
+    logger.error("Fatal error", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    process.exit(1);
   });
 }
 

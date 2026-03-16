@@ -8,6 +8,21 @@ export function createPoller(options: {
   onTicket: (ticket: Ticket) => Promise<void>;
 }): { start: () => Promise<void>; stop: () => void } {
   let isRunning = false;
+  let wakeSleep: (() => void) | null = null;
+
+  function interruptibleSleep(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        wakeSleep = null;
+        resolve();
+      }, ms);
+      wakeSleep = () => {
+        clearTimeout(timer);
+        wakeSleep = null;
+        resolve();
+      };
+    });
+  }
 
   return {
     async start() {
@@ -39,12 +54,13 @@ export function createPoller(options: {
         }
 
         if (!isRunning) break;
-        await Bun.sleep(options.intervalMs);
+        await interruptibleSleep(options.intervalMs);
       }
     },
 
     stop() {
       isRunning = false;
+      wakeSleep?.();
     },
   };
 }
