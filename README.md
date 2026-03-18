@@ -77,13 +77,12 @@ repo:
   path: "/path/to/your/repo"          # Absolute path to the working repository
 
 hooks:
-  pre:                                # Commands to run before the agent (optional)
-    - "git checkout main"
-    - "git pull origin main"
-    - "git checkout -b agent/task-{id}"
+  # When using the Claude executor, a git worktree is created automatically —
+  # you don't need branch/checkout commands here.
+  # Codex manages its own worktrees, so hooks run in the original repo path.
+  pre: []                             # Commands to run before the agent (optional)
 
   post:                               # Commands to run after the agent succeeds (optional)
-    - "bun run test"
     - "git add -A"
     - "git commit -m '{id}: {raw_title}'"
     - "git push origin {branch}"
@@ -119,12 +118,52 @@ The worker runs as a foreground process and handles SIGINT/SIGTERM for graceful 
 
 1. **Poll** — Watch Linear for tickets in the `ready` status on a configurable interval.
 2. **Claim** — Transition the ticket to `in_progress` so no other worker picks it up.
-3. **Pre-hooks** — Run deterministic setup commands in the repo directory (e.g. check out a fresh branch).
-4. **Agent execution** — Hand the ticket to your configured agent harness. The agent reads the task description and does the work autonomously.
-5. **Post-hooks** — Run deterministic verification commands (e.g. tests, linting, push).
-6. **Report** — On success, mark the ticket `done`. On failure, mark it `failed` and post a comment with the failure details.
+3. **Worktree isolation** — For executors that set `needsWorktree: true` (Claude), the pipeline creates an isolated git worktree for the ticket on a fresh branch (`agent/task-{id}`). This keeps each ticket's work fully isolated from the main repo and from other in-flight tickets.
+4. **Pre-hooks** — Run deterministic setup commands in the worktree directory (optional).
+5. **Agent execution** — Hand the ticket to your configured agent harness. The agent reads the task description and does the work autonomously.
+6. **Post-hooks** — Run deterministic verification commands (e.g. commit, push, open PR).
+7. **Report** — On success, mark the ticket `done`. On failure, mark it `failed` and post a comment with the failure details.
 
 One ticket is processed at a time. After completion, the worker returns to polling.
+
+## Git worktree isolation
+
+When using the **Claude** executor, the pipeline automatically creates a dedicated git worktree for each ticket before invoking the agent:
+
+- A new branch `agent/task-{id}` is created from the current `HEAD` of the main repo.
+- The agent runs inside that worktree, so its changes are fully isolated.
+- Multiple agent-worker processes can run against the same repository in parallel without conflicting — each works in its own branch and directory.
+
+Because branch creation is handled automatically, **pre-hooks no longer need `git checkout` or branch commands** when using Claude:
+
+```yaml
+# Claude executor — worktree is created automatically
+hooks:
+  pre: []
+  post:
+    - "git add -A"
+    - "git commit -m '{id}: {raw_title}'"
+    - "git push origin {branch}"
+    - "gh pr create --title '{id}: {raw_title}' --body 'Fixes {id}.' --base main"
+```
+
+**Codex** manages its own worktrees internally, so the pipeline skips automatic worktree creation for Codex; hooks run in the original repo path.
+
+This behaviour is controlled by the `needsWorktree` flag on the `CodeExecutor` interface (`src/pipeline/executor.ts`). Set it to `true` in a custom executor to opt in to automatic worktree isolation, or `false` to manage isolation yourself.
+
+### Running multiple agents in parallel
+
+Because each ticket gets its own isolated worktree and branch, you can safely run multiple agent-worker processes pointing at the same repository:
+
+```bash
+# Terminal 1
+agent-worker --config ./agent-worker.yaml
+
+# Terminal 2
+agent-worker --config ./agent-worker.yaml
+```
+
+Each process claims different tickets (the `in_progress` status transition acts as a distributed lock) and works in a separate worktree, so there are no conflicts.
 
 ## Development
 
