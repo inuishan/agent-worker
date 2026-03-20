@@ -1,6 +1,11 @@
 import { LinearClient } from "@linear/sdk";
 import type { Ticket, TicketProvider } from "./types.ts";
 
+const INITIAL_DELAY_MS = 1000;
+const JITTER_MS = 500;
+const MAX_DELAY_MS = 60000;
+const MAX_BACKOFF_RETRIES = 5;
+
 type StatusMap = {
   ready: string;
   in_progress: string;
@@ -10,9 +15,9 @@ type StatusMap = {
 
 async function withBackoff<T>(
   fn: () => Promise<T>,
-  maxRetries: number = 5
+  maxRetries: number = MAX_BACKOFF_RETRIES
 ): Promise<T> {
-  let delay = 1000;
+  let delay = INITIAL_DELAY_MS;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
@@ -23,9 +28,9 @@ async function withBackoff<T>(
 
       if (!isRateLimit || attempt === maxRetries) throw err;
 
-      const jitter = Math.random() * 500;
+      const jitter = Math.random() * JITTER_MS;
       await Bun.sleep(delay + jitter);
-      delay = Math.min(delay * 2, 60000);
+      delay = Math.min(delay * 2, MAX_DELAY_MS);
     }
   }
   throw new Error("Unreachable");
