@@ -77,9 +77,8 @@ repo:
   path: "/path/to/your/repo"          # Absolute path to the working repository
 
 hooks:
-  # When using the Claude executor, a git worktree is created automatically —
-  # you don't need branch/checkout commands here.
-  # Codex manages its own worktrees, so hooks run in the original repo path.
+  # The built-in executors create a git worktree automatically, so you
+  # don't need branch/checkout commands here.
   pre: []                             # Commands to run before the agent (optional)
 
   post:                               # Commands to run after the agent succeeds (optional)
@@ -147,7 +146,7 @@ hooks:
     - "gh pr create --title '{id}: {raw_title}' --body 'Fixes {id}.' --base main"
 ```
 
-**Codex** manages its own worktrees internally, so the pipeline skips automatic worktree creation for Codex; hooks run in the original repo path.
+**Codex** uses the same agent-worker-managed worktree flow as Claude, so post-hooks run in the ticket branch worktree and `{branch}` resolves to a real local branch.
 
 This behaviour is controlled by the `needsWorktree` flag on the `CodeExecutor` interface (`src/pipeline/executor.ts`). Set it to `true` in a custom executor to opt in to automatic worktree isolation, or `false` to manage isolation yourself.
 

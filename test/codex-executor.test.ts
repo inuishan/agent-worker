@@ -15,9 +15,9 @@ describe("createCodexExecutor", () => {
     expect(executor.name).toBe("codex");
   });
 
-  test("needsWorktree is false", () => {
+  test("needsWorktree is true", () => {
     const executor = createCodexExecutor();
-    expect(executor.needsWorktree).toBe(false);
+    expect(executor.needsWorktree).toBe(true);
   });
 
   test("returns correct shape on failure (codex not installed)", async () => {

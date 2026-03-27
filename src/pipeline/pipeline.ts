@@ -18,11 +18,11 @@ async function createWorktree(
   branch: string,
   logger: Logger
 ): Promise<string> {
-  const worktreePath = join(tmpdir(), `agent-worker-${branch}`);
-  const cmd = `git worktree add -b ${branch} ${worktreePath} main`;
+  const worktreeDirName = `agent-worker-${branch.replaceAll("/", "-")}`;
+  const worktreePath = join(tmpdir(), worktreeDirName);
   logger.info("Creating worktree", { worktreePath, branch });
 
-  const proc = Bun.spawn(["sh", "-c", cmd], {
+  const proc = Bun.spawn(["git", "worktree", "add", "-b", branch, worktreePath, "main"], {
     cwd: repoPath,
     stdout: "pipe",
     stderr: "pipe",
@@ -48,7 +48,7 @@ async function removeWorktree(
 ): Promise<void> {
   logger.info("Removing worktree", { worktreePath });
 
-  const proc = Bun.spawn(["sh", "-c", `git worktree remove --force ${worktreePath}`], {
+  const proc = Bun.spawn(["git", "worktree", "remove", "--force", worktreePath], {
     cwd: repoPath,
     stdout: "pipe",
     stderr: "pipe",
@@ -81,8 +81,7 @@ export async function executePipeline(options: {
   let effectiveCwd = repoCwd;
   let worktreePath: string | null = null;
 
-  // Create an isolated worktree if the executor needs one (e.g. Claude).
-  // Codex manages its own worktrees internally so we skip this.
+  // Create an isolated worktree when the executor opts into branch isolation.
   if (useWorktree) {
     try {
       worktreePath = await createWorktree(repoCwd, vars.branch, logger);

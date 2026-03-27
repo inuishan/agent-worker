@@ -14,12 +14,12 @@ The prompt contains the ticket title and description. Codex runs autonomously, m
 
 ## Worktree isolation
 
-The Claude executor sets `needsWorktree: true`, so the pipeline creates an isolated git worktree (`agent/task-{id}`) before execution. **Codex sets `needsWorktree: false`** — Codex manages its own internal worktree isolation, so the pipeline skips automatic worktree creation.
+Codex sets `needsWorktree: true`, so the pipeline creates an isolated git worktree (`agent/task-{id}`) before execution, just like the Claude executor.
 
 This means:
-- Hooks run in the original `repo.path` directory, not in a separate worktree.
-- You do **not** need to add `git checkout` or branch creation commands to your pre-hooks; Codex handles that internally.
-- Post-hooks that push or open a PR should reference the branch that Codex created — or omit branch-specific commands if Codex handles the full PR lifecycle.
+- Hooks run inside the ticket worktree, not on your main checkout.
+- You do **not** need to add `git checkout` or branch creation commands to your pre-hooks.
+- Post-hooks that push or open a PR can safely reference `{branch}`.
 
 ## Prerequisites
 
@@ -53,7 +53,7 @@ repo:
   path: "/path/to/your/repo"
 
 hooks:
-  # Codex manages its own worktrees — no branch checkout needed here.
+  # Codex runs in an agent-worker-managed worktree — no branch checkout needed here.
   pre: []
   post:
     - "git add -A"

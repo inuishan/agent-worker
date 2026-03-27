@@ -9,11 +9,18 @@ export function createClaudeExecutor(): CodeExecutor {
     async run(prompt: string, cwd: string, timeoutMs: number, logger: Logger): Promise<ExecutorResult> {
       logger.info("Claude Code started", { timeoutMs });
 
-      const proc = Bun.spawn(["claude", "--print", "--dangerously-skip-permissions", "-p", prompt], {
-        cwd,
-        stdout: "pipe",
-        stderr: "pipe",
-      });
+      let proc: ReturnType<typeof Bun.spawn>;
+      try {
+        proc = Bun.spawn(["claude", "--print", "--dangerously-skip-permissions", "-p", prompt], {
+          cwd,
+          stdout: "pipe",
+          stderr: "pipe",
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error("Claude Code failed to start", { error: message });
+        return { success: false, output: message, timedOut: false, exitCode: null };
+      }
 
       let timedOut = false;
       const timer = setTimeout(() => {

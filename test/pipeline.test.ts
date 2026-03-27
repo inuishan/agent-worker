@@ -51,7 +51,7 @@ function failingExecutor(): CodeExecutor {
 
 function createTempGitRepo(): string {
   const dir = mkdtempSync(join(tmpdir(), "agent-worker-test-"));
-  execSync("git init && git commit --allow-empty -m 'init'", { cwd: dir });
+  execSync("git init -b main && git commit --allow-empty -m 'init'", { cwd: dir });
   return dir;
 }
 
@@ -111,6 +111,20 @@ describe("executePipeline", () => {
     });
     expect(result.success).toBe(true);
     expect(result.output).toBe("mock output");
+  });
+
+  test("runs post-hooks on the ticket branch when worktree isolation is enabled", async () => {
+    const result = await executePipeline({
+      ticket,
+      preHooks: [],
+      postHooks: ['test "$(git rev-parse --abbrev-ref HEAD)" = "agent/task-ENG-100"'],
+      repoCwd: repoDir,
+      executor: mockExecutor(),
+      timeoutMs: 5000,
+      logger: noopLogger,
+    });
+
+    expect(result.success).toBe(true);
   });
 
   test("fails at executor stage when executor fails", async () => {

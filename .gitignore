@@ -14,12 +14,14 @@ coverage
 logs
 _.log
 report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+/agent-worker.log
 
 # dotenv environment variable files
 .env
 
 # local config (contains project IDs)
 agent-worker.yaml
+/agent-worker
 .env.development.local
 .env.test.local
 .env.production.local
