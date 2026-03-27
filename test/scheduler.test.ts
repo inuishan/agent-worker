@@ -21,22 +21,23 @@ const ticket: Ticket = {
 
 function makeConfig(overrides?: Partial<Config>): Config {
   return {
-    apiKey: "test-key",
+    apiKey: overrides?.apiKey ?? "test-key",
     linear: {
+      ...overrides?.linear,
       project_id: "proj-1",
       poll_interval_seconds: 10,
       statuses: {
+        ...overrides?.linear?.statuses,
         ready: "Todo",
         in_progress: "In Progress",
         done: "Done",
         failed: "Canceled",
       },
     },
-    repo: { path: "/tmp" },
-    hooks: { pre: [], post: [] },
-    executor: { type: "claude", timeout_seconds: 5, retries: 0 },
-    log: { level: "info" },
-    ...overrides,
+    repo: { path: "/tmp", ...overrides?.repo },
+    hooks: { pre: [], post: [], post_optional: [], ...overrides?.hooks },
+    executor: { type: "claude", timeout_seconds: 5, retries: 0, ...overrides?.executor },
+    log: { level: "info", ...overrides?.log },
   };
 }
 

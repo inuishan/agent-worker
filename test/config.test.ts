@@ -44,6 +44,7 @@ repo:
     expect(config.repo.path).toBe("/tmp/repo");
     expect(config.hooks.pre).toEqual([]);
     expect(config.hooks.post).toEqual([]);
+    expect(config.hooks.post_optional).toEqual([]);
     expect(config.executor.type).toBe("claude");
     expect(config.executor.timeout_seconds).toBe(300);
     expect(config.executor.retries).toBe(0);
@@ -69,6 +70,8 @@ hooks:
     - "git checkout -b feature"
   post:
     - "npm test"
+  post_optional:
+    - "gh pr create"
 executor:
   type: claude
   timeout_seconds: 600
@@ -81,6 +84,7 @@ log:
     expect(config.linear.poll_interval_seconds).toBe(30);
     expect(config.hooks.pre).toEqual(["git pull", "git checkout -b feature"]);
     expect(config.hooks.post).toEqual(["npm test"]);
+    expect(config.hooks.post_optional).toEqual(["gh pr create"]);
     expect(config.executor.type).toBe("claude");
     expect(config.executor.timeout_seconds).toBe(600);
     expect(config.executor.retries).toBe(2);

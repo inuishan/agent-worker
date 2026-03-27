@@ -6,14 +6,22 @@ export type HookResult = {
   failedCommand?: string;
   exitCode?: number;
   output?: string;
+  failures?: Array<{
+    command: string;
+    exitCode: number;
+    output: string;
+  }>;
 };
 
 export async function runHooks(
   commands: string[],
   cwd: string,
   vars: TaskVars,
-  logger: Logger
+  logger: Logger,
+  options: { continueOnError?: boolean } = {}
 ): Promise<HookResult> {
+  const failures: NonNullable<HookResult["failures"]> = [];
+
   for (const raw of commands) {
     const command = interpolate(raw, vars);
     logger.info("Running hook", { command });
@@ -34,10 +42,16 @@ export async function runHooks(
 
     if (exitCode !== 0) {
       const output = (stderr || stdout).trim();
+      if (options.continueOnError) {
+        logger.warn("Optional hook failed", { command, exitCode, output });
+        failures.push({ command, exitCode, output });
+        continue;
+      }
+
       logger.error("Hook failed", { command, exitCode, output });
       return { success: false, failedCommand: command, exitCode, output };
     }
   }
 
-  return { success: true };
+  return failures.length > 0 ? { success: true, failures } : { success: true };
 }

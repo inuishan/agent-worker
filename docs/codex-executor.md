@@ -20,6 +20,7 @@ This means:
 - Hooks run inside the ticket worktree, not on your main checkout.
 - You do **not** need to add `git checkout` or branch creation commands to your pre-hooks.
 - Post-hooks that push or open a PR can safely reference `{branch}`.
+- If Codex makes no repository changes, post-hooks are skipped and the task still succeeds.
 
 ## Prerequisites
 
@@ -59,6 +60,7 @@ hooks:
     - "git add -A"
     - "git commit -m '{id}: {raw_title}'"
     - "git push origin {branch}"
+  post_optional:
     - "gh pr create --title '{id}: {raw_title}' --body 'Fixes {id}. Implemented by Agent Worker.' --base main"
 
 executor:

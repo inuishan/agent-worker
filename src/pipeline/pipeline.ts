@@ -13,6 +13,11 @@ export type PipelineResult = {
   output?: string;
 };
 
+function appendOutput(output: string, lines: string[]): string {
+  const suffix = lines.join("\n");
+  return output.trim() ? `${output}\n\n${suffix}` : suffix;
+}
+
 async function runGit(
   args: string[],
   cwd: string
@@ -39,6 +44,15 @@ async function refreshBaseBranch(repoPath: string, logger: Logger): Promise<void
   if (exitCode !== 0) {
     throw new Error(`Failed to fetch origin/main: ${(stderr || stdout).trim()}`);
   }
+}
+
+async function hasGitChanges(cwd: string): Promise<boolean> {
+  const { exitCode, stdout, stderr } = await runGit(["status", "--porcelain"], cwd);
+  if (exitCode !== 0) {
+    throw new Error(`Failed to check git status: ${(stderr || stdout).trim()}`);
+  }
+
+  return stdout.trim().length > 0;
 }
 
 async function createWorktree(
@@ -81,12 +95,13 @@ export async function executePipeline(options: {
   ticket: Ticket;
   preHooks: string[];
   postHooks: string[];
+  optionalPostHooks: string[];
   repoCwd: string;
   executor: CodeExecutor;
   timeoutMs: number;
   logger: Logger;
 }): Promise<PipelineResult> {
-  const { ticket, preHooks, postHooks, repoCwd, executor, timeoutMs, logger } = options;
+  const { ticket, preHooks, postHooks, optionalPostHooks, repoCwd, executor, timeoutMs, logger } = options;
   const vars = buildTaskVars(ticket);
 
   const useWorktree = executor.needsWorktree;
@@ -136,6 +151,17 @@ export async function executePipeline(options: {
       };
     }
 
+    const hasAnyPostHooks = postHooks.length > 0 || optionalPostHooks.length > 0;
+    if (hasAnyPostHooks) {
+      const repoChanged = await hasGitChanges(effectiveCwd);
+      if (!repoChanged) {
+        return {
+          success: true,
+          output: appendOutput(execResult.output, ["No repository changes detected; skipped post-hooks."]),
+        };
+      }
+    }
+
     // Post-hooks
     if (postHooks.length > 0) {
       const postResult = await runHooks(postHooks, effectiveCwd, vars, logger);
@@ -148,7 +174,21 @@ export async function executePipeline(options: {
       }
     }
 
-    return { success: true, output: execResult.output };
+    let output = execResult.output;
+
+    if (optionalPostHooks.length > 0) {
+      const optionalResult = await runHooks(optionalPostHooks, effectiveCwd, vars, logger, {
+        continueOnError: true,
+      });
+      if (optionalResult.failures && optionalResult.failures.length > 0) {
+        output = appendOutput(output, [
+          "Optional post-hooks failed but the task was kept successful:",
+          ...optionalResult.failures.map((failure) => `- ${failure.command} (exit ${failure.exitCode})`),
+        ]);
+      }
+    }
+
+    return { success: true, output };
   } finally {
     if (worktreePath) {
       await removeWorktree(repoCwd, worktreePath, logger);

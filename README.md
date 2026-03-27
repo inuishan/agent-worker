@@ -85,6 +85,7 @@ hooks:
     - "git add -A"
     - "git commit -m '{id}: {raw_title}'"
     - "git push origin {branch}"
+  post_optional:                      # Best-effort commands; failures do not fail the task
     - "gh pr create --title '{id}: {raw_title}' --body 'Fixes {id}. Implemented by Agent Worker.' --base main"
 
 executor:
@@ -120,7 +121,7 @@ The worker runs as a foreground process and handles SIGINT/SIGTERM for graceful 
 3. **Worktree isolation** — For executors that set `needsWorktree: true`, the pipeline refreshes `origin/main` and creates an isolated git worktree for the ticket on a fresh branch (`agent/task-{id}`). This keeps each ticket's work fully isolated from the main repo and from other in-flight tickets while starting from the latest remote mainline.
 4. **Pre-hooks** — Run deterministic setup commands in the worktree directory (optional).
 5. **Agent execution** — Hand the ticket to your configured agent harness. The agent reads the task description and does the work autonomously.
-6. **Post-hooks** — Run deterministic verification commands (e.g. commit, push, open PR).
+6. **Post-hooks** — Run required post-processing commands (e.g. commit, push), then optional best-effort hooks such as PR creation.
 7. **Report** — On success, mark the ticket `done`. On failure, mark it `failed` and post a comment with the failure details.
 
 One ticket is processed at a time. After completion, the worker returns to polling.
@@ -144,8 +145,11 @@ hooks:
     - "git add -A"
     - "git commit -m '{id}: {raw_title}'"
     - "git push origin {branch}"
+  post_optional:
     - "gh pr create --title '{id}: {raw_title}' --body 'Fixes {id}.' --base main"
 ```
+
+If the agent produces no repository changes, agent-worker skips post-hooks and still marks the task successful. This is useful for review-only or reporting tasks such as checking test coverage.
 
 **Codex** uses the same agent-worker-managed worktree flow as Claude, so post-hooks run in the ticket branch worktree and `{branch}` resolves to a real local branch.
 
@@ -236,6 +240,7 @@ hooks:
     - "git add -A"
     - "git commit -m '{id}: {raw_title}'"
     - "git push origin {branch}"
+  post_optional:
     - "gh pr create --title '{id}: {raw_title}' --body 'Fixes {id}.' --base main"
 
 executor:

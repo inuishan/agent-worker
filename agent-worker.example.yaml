@@ -36,6 +36,10 @@ hooks:
     - "git add -A"
     - "git commit -m '{id}: {raw_title}'"
     - "git push origin {branch}"
+
+  # Best-effort post hooks (optional)
+  # Failures are logged but do not fail the task. Useful for PR creation.
+  post_optional:
     - "gh pr create --title '{id}: {raw_title}' --body 'Fixes {id}. Implemented by Agent Worker.' --base main"
 
 executor:

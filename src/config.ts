@@ -22,7 +22,8 @@ const RepoSchema = z.object({
 const HooksSchema = z.object({
   pre: z.array(z.string()).default([]),
   post: z.array(z.string()).default([]),
-}).default({ pre: [], post: [] });
+  post_optional: z.array(z.string()).default([]),
+}).default({ pre: [], post: [], post_optional: [] });
 
 const ExecutorSchema = z.object({
   type: z.enum(["claude", "codex"]).default("claude"),

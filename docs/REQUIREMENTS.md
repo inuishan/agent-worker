@@ -19,15 +19,16 @@ Developers waste time on repetitive, well-scoped tickets that an AI agent could 
 - FR-05: Before dispatching to Claude Code, the worker executes an ordered list of pre-hook shell commands sequentially in the configured repo directory.
 - FR-06: If any pre-hook command exits with a non-zero code, the task is marked failed and Claude Code is not invoked.
 - FR-07: The worker dispatches the ticket title and description to Claude Code for execution.
-- FR-08: After Claude Code completes successfully, the worker executes an ordered list of post-hook shell commands sequentially in the configured repo directory.
-- FR-09: If any post-hook command exits with a non-zero code, the task is marked failed.
-- FR-10: On success (Claude Code + all post-hooks pass), the worker transitions the ticket to "Done".
+- FR-08: After Claude Code completes successfully, the worker executes an ordered list of required post-hook shell commands sequentially in the configured repo directory if the task produced repository changes.
+- FR-09: If any required post-hook command exits with a non-zero code, the task is marked failed.
+- FR-10: On success (Claude Code + all required post-hooks pass, or no repository changes were made), the worker transitions the ticket to "Done".
+- FR-10a: Optional post-hook commands can be configured separately; their failures are logged but do not fail the task.
 - FR-11: On failure (pre-hook, Claude Code, post-hook, or timeout), the worker transitions the ticket to "Failed" and posts the error message as a comment on the ticket.
 - FR-12: Hook commands support variable interpolation: `{id}` (Linear ticket identifier), `{title}` (slugified ticket title), `{branch}` (generated branch name in the form `agent/task-{id}`).
 - FR-13: Claude Code execution has a configurable timeout (default 300 seconds). Exceeding the timeout is treated as a failure.
 - FR-14: Task retries are configurable from 0 (default) to 3. When retries are exhausted, the ticket is marked failed.
 - FR-15: The worker reads its Linear API key from the `LINEAR_API_KEY` environment variable.
-- FR-16: The worker accepts a single configuration file (YAML) defining: project ID, status names (ready, in_progress, done, failed), poll interval, repo path, pre-hooks, post-hooks, Claude Code timeout, and retry count.
+- FR-16: The worker accepts a single configuration file (YAML) defining: project ID, status names (ready, in_progress, done, failed), poll interval, repo path, pre-hooks, required post-hooks, optional post-hooks, Claude Code timeout, and retry count.
 - FR-17: The worker runs continuously until manually stopped (e.g. Ctrl-C / SIGINT / SIGTERM).
 - FR-18: If the worker process crashes mid-task, the ticket remains in "In Progress" (no cleanup attempt).
 </requirements>
@@ -45,7 +46,7 @@ Developers waste time on repetitive, well-scoped tickets that an AI agent could 
 </nfr>
 
 ## Out of Scope
-- GitHub/GitLab PR creation — handled by post-hooks or manually.
+- GitHub/GitLab PR creation — handled by optional post-hooks or manually.
 - Multiple parallel workers processing tickets concurrently.
 - Remote/VPS deployment or hosted service mode.
 - Web UI or dashboard.

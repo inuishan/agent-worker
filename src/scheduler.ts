@@ -49,6 +49,7 @@ export async function processTicket(options: {
         ticket,
         preHooks: config.hooks.pre,
         postHooks: config.hooks.post,
+        optionalPostHooks: config.hooks.post_optional,
         repoCwd: config.repo.path,
         executor,
         timeoutMs: config.executor.timeout_seconds * 1000,

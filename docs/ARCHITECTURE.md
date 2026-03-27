@@ -143,7 +143,7 @@ Step-by-step for a single ticket lifecycle:
 3. **Claim**: Poller passes first ticket to Scheduler. Scheduler calls `linearClient.transitionStatus(ticket.id, "in_progress")` atomically. If this fails (e.g. ticket was already claimed), log and return to polling.
 4. **Pre-hooks**: Pipeline calls `hookRunner.runHooks(config.hooks.pre, config.repo.path, vars)`. If any hook fails → jump to step 8 (failure).
 5. **Code Executor**: Pipeline calls `executor.run(prompt, config.repo.path, timeout)`. The executor is created from `config.executor.type` (claude or codex). If timeout or non-zero exit → jump to step 8 (failure).
-6. **Post-hooks**: Pipeline calls `hookRunner.runHooks(config.hooks.post, config.repo.path, vars)`. If any hook fails → jump to step 8 (failure).
+6. **Post-hooks**: If the agent produced repository changes, Pipeline runs required post-hooks from `config.hooks.post`. If any required hook fails → jump to step 8 (failure). It then runs optional post-hooks from `config.hooks.post_optional`; failures are logged but do not fail the task. If no repository changes were made, all post-hooks are skipped.
 7. **Success**: Scheduler calls `linearClient.transitionStatus(ticket.id, "done")`. Log success. Return to polling.
 8. **Failure**: If retries remain, Scheduler loops back to step 4. If retries exhausted, Scheduler calls `linearClient.transitionStatus(ticket.id, "failed")` and `linearClient.postComment(ticket.id, errorDetails)`. Log failure. Return to polling.
 
@@ -253,6 +253,8 @@ hooks:
     - "git add -A"
     - "git commit -m 'feat: {title}'"
     - "git push origin agent/task-{id}"
+  post_optional:                     # optional, default []
+    - "gh pr create --title 'feat: {title}' --body 'Fixes {id}' --base main"
 
 executor:
   type: claude                         # optional, default "claude" — or "codex"

@@ -13,7 +13,9 @@ const noopLogger: Logger = {
 const vars: TaskVars = {
   id: "ENG-123",
   title: "fix-bug",
+  raw_title: "Fix bug",
   branch: "agent/task-ENG-123",
+  worktree: "/tmp/agent-worker-agent-task-ENG-123",
 };
 
 describe("runHooks", () => {
@@ -52,5 +54,18 @@ describe("runHooks", () => {
       noopLogger
     );
     expect(result.success).toBe(true);
+  });
+
+  test("continues after optional hook failures when configured", async () => {
+    const result = await runHooks(
+      ["exit 1", "echo still-runs"],
+      "/tmp",
+      vars,
+      noopLogger,
+      { continueOnError: true }
+    );
+    expect(result.success).toBe(true);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures?.[0]?.command).toBe("exit 1");
   });
 });

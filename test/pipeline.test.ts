@@ -98,6 +98,7 @@ describe("executePipeline", () => {
       ticket,
       preHooks: ["exit 1"],
       postHooks: [],
+      optionalPostHooks: [],
       repoCwd: repoDir,
       executor: mockExecutor(),
       timeoutMs: 5000,
@@ -112,6 +113,7 @@ describe("executePipeline", () => {
       ticket,
       preHooks: ["echo 'setup ok'", "sh -c 'echo bad >&2; exit 2'"],
       postHooks: [],
+      optionalPostHooks: [],
       repoCwd: repoDir,
       executor: mockExecutor(),
       timeoutMs: 5000,
@@ -126,9 +128,20 @@ describe("executePipeline", () => {
     const result = await executePipeline({
       ticket,
       preHooks: ["echo pre"],
-      postHooks: ["echo post"],
+      postHooks: ['test -f changed.txt'],
+      optionalPostHooks: [],
       repoCwd: repoDir,
-      executor: mockExecutor(),
+      executor: mockExecutor({
+        run: async (_prompt, cwd) => {
+          execSync("touch changed.txt", { cwd });
+          return {
+            success: true,
+            output: "mock output",
+            timedOut: false,
+            exitCode: 0,
+          };
+        },
+      }),
       timeoutMs: 5000,
       logger: noopLogger,
     });
@@ -141,6 +154,7 @@ describe("executePipeline", () => {
       ticket,
       preHooks: [],
       postHooks: ['test "$(git rev-parse --abbrev-ref HEAD)" = "agent/task-ENG-100"'],
+      optionalPostHooks: [],
       repoCwd: repoDir,
       executor: mockExecutor(),
       timeoutMs: 5000,
@@ -157,6 +171,7 @@ describe("executePipeline", () => {
       ticket,
       preHooks: [],
       postHooks: [`test "$(git rev-parse HEAD)" = "${remoteCommit}"`],
+      optionalPostHooks: [],
       repoCwd: repoDir,
       executor: mockExecutor(),
       timeoutMs: 5000,
@@ -171,6 +186,7 @@ describe("executePipeline", () => {
       ticket,
       preHooks: [],
       postHooks: [],
+      optionalPostHooks: [],
       repoCwd: repoDir,
       executor: failingExecutor(),
       timeoutMs: 5000,
@@ -185,6 +201,7 @@ describe("executePipeline", () => {
       ticket,
       preHooks: [],
       postHooks: ["echo post"],
+      optionalPostHooks: [],
       repoCwd: repoDir,
       executor: failingExecutor(),
       timeoutMs: 5000,
@@ -199,6 +216,7 @@ describe("executePipeline", () => {
       ticket,
       preHooks: [],
       postHooks: [],
+      optionalPostHooks: [],
       repoCwd: repoDir,
       executor: mockExecutor(),
       timeoutMs: 5000,
@@ -215,6 +233,7 @@ describe("executePipeline", () => {
       ticket,
       preHooks: ["exit 1"],
       postHooks: [],
+      optionalPostHooks: [],
       repoCwd: repoDir,
       executor: mockExecutor(),
       timeoutMs: 5000,
@@ -223,5 +242,47 @@ describe("executePipeline", () => {
     const output = execSync("git worktree list", { cwd: repoDir }).toString();
     const lines = output.trim().split("\n");
     expect(lines.length).toBe(1);
+  });
+
+  test("skips post-hooks when the executor makes no repository changes", async () => {
+    const result = await executePipeline({
+      ticket,
+      preHooks: [],
+      postHooks: ["exit 1"],
+      optionalPostHooks: ["exit 1"],
+      repoCwd: repoDir,
+      executor: mockExecutor(),
+      timeoutMs: 5000,
+      logger: noopLogger,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.output).toContain("No repository changes detected; skipped post-hooks.");
+  });
+
+  test("does not fail when optional post-hooks fail", async () => {
+    const result = await executePipeline({
+      ticket,
+      preHooks: [],
+      postHooks: ['test -f changed.txt'],
+      optionalPostHooks: ["exit 1"],
+      repoCwd: repoDir,
+      executor: mockExecutor({
+        run: async (_prompt, cwd) => {
+          execSync("touch changed.txt", { cwd });
+          return {
+            success: true,
+            output: "changed file",
+            timedOut: false,
+            exitCode: 0,
+          };
+        },
+      }),
+      timeoutMs: 5000,
+      logger: noopLogger,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.output).toContain("Optional post-hooks failed but the task was kept successful:");
   });
 });
