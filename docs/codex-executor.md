@@ -14,7 +14,7 @@ The prompt contains the ticket title and description. Codex runs autonomously, m
 
 ## Worktree isolation
 
-Codex sets `needsWorktree: true`, so the pipeline creates an isolated git worktree (`agent/task-{id}`) before execution, just like the Claude executor.
+Codex sets `needsWorktree: true`, so the pipeline refreshes `origin/main` and creates an isolated git worktree (`agent/task-{id}`) before execution, just like the Claude executor.
 
 This means:
 - Hooks run inside the ticket worktree, not on your main checkout.

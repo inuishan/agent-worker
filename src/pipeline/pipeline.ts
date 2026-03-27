@@ -13,29 +13,51 @@ export type PipelineResult = {
   output?: string;
 };
 
-async function createWorktree(
-  repoPath: string,
-  branch: string,
-  logger: Logger
-): Promise<string> {
-  const worktreeDirName = `agent-worker-${branch.replaceAll("/", "-")}`;
-  const worktreePath = join(tmpdir(), worktreeDirName);
-  logger.info("Creating worktree", { worktreePath, branch });
-
-  const proc = Bun.spawn(["git", "worktree", "add", "-b", branch, worktreePath, "main"], {
-    cwd: repoPath,
+async function runGit(
+  args: string[],
+  cwd: string
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  const proc = Bun.spawn(["git", ...args], {
+    cwd,
     stdout: "pipe",
     stderr: "pipe",
   });
 
-  const [exitCode, _, stderr] = await Promise.all([
+  const [exitCode, stdout, stderr] = await Promise.all([
     proc.exited,
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
   ]);
 
+  return { exitCode, stdout, stderr };
+}
+
+async function refreshBaseBranch(repoPath: string, logger: Logger): Promise<void> {
+  logger.info("Refreshing base branch", { remote: "origin", branch: "main" });
+
+  const { exitCode, stdout, stderr } = await runGit(["fetch", "origin", "main"], repoPath);
   if (exitCode !== 0) {
-    throw new Error(`Failed to create worktree: ${stderr.trim()}`);
+    throw new Error(`Failed to fetch origin/main: ${(stderr || stdout).trim()}`);
+  }
+}
+
+async function createWorktree(
+  repoPath: string,
+  branch: string,
+  logger: Logger
+): Promise<string> {
+  await refreshBaseBranch(repoPath, logger);
+
+  const worktreeDirName = `agent-worker-${branch.replaceAll("/", "-")}`;
+  const worktreePath = join(tmpdir(), worktreeDirName);
+  logger.info("Creating worktree", { worktreePath, branch });
+
+  const { exitCode, stdout, stderr } = await runGit(
+    ["worktree", "add", "-B", branch, worktreePath, "origin/main"],
+    repoPath
+  );
+  if (exitCode !== 0) {
+    throw new Error(`Failed to create worktree: ${(stderr || stdout).trim()}`);
   }
 
   return worktreePath;
@@ -48,17 +70,7 @@ async function removeWorktree(
 ): Promise<void> {
   logger.info("Removing worktree", { worktreePath });
 
-  const proc = Bun.spawn(["git", "worktree", "remove", "--force", worktreePath], {
-    cwd: repoPath,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-
-  const [exitCode, _, stderr] = await Promise.all([
-    proc.exited,
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
+  const { exitCode, stderr } = await runGit(["worktree", "remove", "--force", worktreePath], repoPath);
 
   if (exitCode !== 0) {
     logger.warn("Failed to remove worktree", { worktreePath, error: stderr.trim() });

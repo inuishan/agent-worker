@@ -50,16 +50,39 @@ function failingExecutor(): CodeExecutor {
 }
 
 function createTempGitRepo(): string {
-  const dir = mkdtempSync(join(tmpdir(), "agent-worker-test-"));
-  execSync("git init -b main && git commit --allow-empty -m 'init'", { cwd: dir });
-  return dir;
+  const rootDir = mkdtempSync(join(tmpdir(), "agent-worker-test-"));
+  const remoteDir = join(rootDir, "remote.git");
+  const repoDir = join(rootDir, "repo");
+
+  execSync(`git init --bare ${remoteDir}`);
+  execSync(`git clone ${remoteDir} ${repoDir}`);
+  execSync("git checkout -b main", { cwd: repoDir });
+  execSync("git commit --allow-empty -m 'init'", { cwd: repoDir });
+  execSync("git push -u origin main", { cwd: repoDir });
+  execSync("git symbolic-ref HEAD refs/heads/main", { cwd: remoteDir });
+
+  return rootDir;
+}
+
+function advanceRemoteMain(rootDir: string): string {
+  const remoteDir = join(rootDir, "remote.git");
+  const updaterDir = join(rootDir, "updater");
+
+  execSync(`git clone ${remoteDir} ${updaterDir}`);
+  execSync("git checkout main", { cwd: updaterDir });
+  execSync("git commit --allow-empty -m 'remote advance'", { cwd: updaterDir });
+  execSync("git push origin main", { cwd: updaterDir });
+
+  return execSync("git rev-parse HEAD", { cwd: updaterDir }).toString().trim();
 }
 
 describe("executePipeline", () => {
+  let rootDir: string;
   let repoDir: string;
 
   beforeEach(() => {
-    repoDir = createTempGitRepo();
+    rootDir = createTempGitRepo();
+    repoDir = join(rootDir, "repo");
   });
 
   afterEach(() => {
@@ -67,7 +90,7 @@ describe("executePipeline", () => {
     try {
       execSync("git worktree prune", { cwd: repoDir });
     } catch {}
-    rmSync(repoDir, { recursive: true, force: true });
+    rmSync(rootDir, { recursive: true, force: true });
   });
 
   test("fails on pre-hook failure before reaching executor", async () => {
@@ -118,6 +141,22 @@ describe("executePipeline", () => {
       ticket,
       preHooks: [],
       postHooks: ['test "$(git rev-parse --abbrev-ref HEAD)" = "agent/task-ENG-100"'],
+      repoCwd: repoDir,
+      executor: mockExecutor(),
+      timeoutMs: 5000,
+      logger: noopLogger,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  test("creates the worktree from the latest origin/main", async () => {
+    const remoteCommit = advanceRemoteMain(rootDir);
+
+    const result = await executePipeline({
+      ticket,
+      preHooks: [],
+      postHooks: [`test "$(git rev-parse HEAD)" = "${remoteCommit}"`],
       repoCwd: repoDir,
       executor: mockExecutor(),
       timeoutMs: 5000,

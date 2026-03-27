@@ -117,7 +117,7 @@ The worker runs as a foreground process and handles SIGINT/SIGTERM for graceful 
 
 1. **Poll** — Watch Linear for tickets in the `ready` status on a configurable interval.
 2. **Claim** — Transition the ticket to `in_progress` so no other worker picks it up.
-3. **Worktree isolation** — For executors that set `needsWorktree: true` (Claude), the pipeline creates an isolated git worktree for the ticket on a fresh branch (`agent/task-{id}`). This keeps each ticket's work fully isolated from the main repo and from other in-flight tickets.
+3. **Worktree isolation** — For executors that set `needsWorktree: true`, the pipeline refreshes `origin/main` and creates an isolated git worktree for the ticket on a fresh branch (`agent/task-{id}`). This keeps each ticket's work fully isolated from the main repo and from other in-flight tickets while starting from the latest remote mainline.
 4. **Pre-hooks** — Run deterministic setup commands in the worktree directory (optional).
 5. **Agent execution** — Hand the ticket to your configured agent harness. The agent reads the task description and does the work autonomously.
 6. **Post-hooks** — Run deterministic verification commands (e.g. commit, push, open PR).
@@ -129,7 +129,8 @@ One ticket is processed at a time. After completion, the worker returns to polli
 
 When using the **Claude** executor, the pipeline automatically creates a dedicated git worktree for each ticket before invoking the agent:
 
-- A new branch `agent/task-{id}` is created from the current `HEAD` of the main repo.
+- `origin/main` is refreshed before branch creation.
+- A new branch `agent/task-{id}` is created from the latest `origin/main`.
 - The agent runs inside that worktree, so its changes are fully isolated.
 - Multiple agent-worker processes can run against the same repository in parallel without conflicting — each works in its own branch and directory.
 
