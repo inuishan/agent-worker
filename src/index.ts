@@ -43,6 +43,7 @@ function main() {
     apiKey: config.apiKey,
     projectId: config.linear.project_id,
     statuses: config.linear.statuses,
+    filters: config.linear.filters,
   });
 
   const poller = createPoller({

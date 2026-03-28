@@ -40,8 +40,14 @@ export function createLinearProvider(options: {
   apiKey: string;
   projectId: string;
   statuses: StatusMap;
+  filters: {
+    assignee_name?: string;
+    assignee_is_app?: boolean;
+    unblocked_only: boolean;
+  };
+  client?: Pick<LinearClient, "issues" | "issue" | "team" | "updateIssue" | "createComment">;
 }): TicketProvider {
-  const client = new LinearClient({ apiKey: options.apiKey });
+  const client = options.client ?? new LinearClient({ apiKey: options.apiKey });
   const stateCache = new Map<string, { id: string; name: string }[]>();
 
   async function getTeamStates(teamId: string): Promise<{ id: string; name: string }[]> {
@@ -55,12 +61,29 @@ export function createLinearProvider(options: {
 
   return {
     async fetchReadyTickets(): Promise<Ticket[]> {
+      const filter = {
+        project: { id: { eq: options.projectId } },
+        state: { name: { eq: options.statuses.ready } },
+        ...(options.filters.assignee_name || options.filters.assignee_is_app !== undefined
+          ? {
+              assignee: {
+                ...(options.filters.assignee_name
+                  ? { name: { eq: options.filters.assignee_name } }
+                  : {}),
+                ...(options.filters.assignee_is_app !== undefined
+                  ? { app: { eq: options.filters.assignee_is_app } }
+                  : {}),
+              },
+            }
+          : {}),
+        ...(options.filters.unblocked_only
+          ? { hasBlockedByRelations: { eq: false } }
+          : {}),
+      };
+
       const issues = await withBackoff(() =>
         client.issues({
-          filter: {
-            project: { id: { eq: options.projectId } },
-            state: { name: { eq: options.statuses.ready } },
-          },
+          filter,
         })
       );
 

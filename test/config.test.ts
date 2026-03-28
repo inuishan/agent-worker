@@ -41,6 +41,7 @@ repo:
     expect(config.linear.project_id).toBe("proj-123");
     expect(config.linear.poll_interval_seconds).toBe(60);
     expect(config.linear.statuses.ready).toBe("Todo");
+    expect(config.linear.filters.unblocked_only).toBe(false);
     expect(config.repo.path).toBe("/tmp/repo");
     expect(config.hooks.pre).toEqual([]);
     expect(config.hooks.post).toEqual([]);
@@ -62,6 +63,10 @@ linear:
     in_progress: "Working"
     done: "Complete"
     failed: "Failed"
+  filters:
+    assignee_name: "Codex"
+    assignee_is_app: true
+    unblocked_only: true
 repo:
   path: "/home/user/project"
 hooks:
@@ -82,6 +87,11 @@ log:
     const config = loadConfig(writeConfig(fullYaml));
 
     expect(config.linear.poll_interval_seconds).toBe(30);
+    expect(config.linear.filters).toEqual({
+      assignee_name: "Codex",
+      assignee_is_app: true,
+      unblocked_only: true,
+    });
     expect(config.hooks.pre).toEqual(["git pull", "git checkout -b feature"]);
     expect(config.hooks.post).toEqual(["npm test"]);
     expect(config.hooks.post_optional).toEqual(["gh pr create"]);

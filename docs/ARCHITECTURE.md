@@ -69,7 +69,7 @@ The system has no server, no database, and no background threads. It is a sequen
 ### Linear Provider (implements Ticket Provider)
 - **Purpose**: Linear-specific implementation of the Ticket Provider interface.
 - **Responsibilities**:
-  - Query tickets by project ID and status name via @linear/sdk
+  - Query tickets by project ID, ready status, and optional assignee/blocker filters via @linear/sdk
   - Transition ticket status (ready → in_progress, in_progress → done/failed)
   - Post comments on tickets (failure details)
   - Handle rate limiting with exponential backoff
@@ -80,7 +80,7 @@ The system has no server, no database, and no background threads. It is a sequen
 - **Purpose**: Periodically check Linear for work.
 - **Responsibilities**:
   - Run on a configurable interval (default 60s)
-  - Call Linear Client to fetch ready tickets
+  - Call Linear Client to fetch tickets that match the configured ready status and any optional pickup filters
   - Pass the first available ticket to the Scheduler
   - Do nothing if no tickets are ready
 - **Interface**: `start(): void` — begins the polling loop, runs until SIGINT/SIGTERM
@@ -139,7 +139,7 @@ The system has no server, no database, and no background threads. It is a sequen
 Step-by-step for a single ticket lifecycle:
 
 1. **Startup**: `main()` calls `loadConfig()` to parse YAML + env vars. If invalid, exit with error. Initialize Logger and Linear Client.
-2. **Poll**: Poller calls `linearClient.fetchReadyTickets()` filtered by project ID + configured "ready" status name. If empty, sleep for `poll_interval_seconds` and repeat.
+2. **Poll**: Poller calls `linearClient.fetchReadyTickets()` filtered by project ID + configured "ready" status name, plus any configured assignee and unblocked-only filters. If empty, sleep for `poll_interval_seconds` and repeat.
 3. **Claim**: Poller passes first ticket to Scheduler. Scheduler calls `linearClient.transitionStatus(ticket.id, "in_progress")` atomically. If this fails (e.g. ticket was already claimed), log and return to polling.
 4. **Pre-hooks**: Pipeline calls `hookRunner.runHooks(config.hooks.pre, config.repo.path, vars)`. If any hook fails → jump to step 8 (failure).
 5. **Code Executor**: Pipeline calls `executor.run(prompt, config.repo.path, timeout)`. The executor is created from `config.executor.type` (claude or codex). If timeout or non-zero exit → jump to step 8 (failure).
@@ -238,23 +238,25 @@ linear:
     in_progress: "In Progress"       # required — status to set on pickup
     done: "Done"                     # required — status to set on success
     failed: "Canceled"               # required — status to set on failure
+  filters:                           # optional pickup filters
+    assignee_name: "Codex"           # optional — require this assignee name
+    assignee_is_app: true            # optional — require assignee to be a Linear app
+    unblocked_only: true             # optional, default false — exclude blocked tickets
 
 repo:
   path: "/absolute/path/to/repo"    # required
 
 hooks:
   pre:                               # optional, default []
-    - "git checkout main"
-    - "git pull origin main"
-    - "git checkout -b agent/task-{id}"
   post:                              # optional, default []
     - "bun run lint"
     - "bun run test"
     - "git add -A"
     - "git commit -m 'feat: {title}'"
-    - "git push origin agent/task-{id}"
+    - "git push origin {branch}"
   post_optional:                     # optional, default []
     - "gh pr create --title 'feat: {title}' --body 'Fixes {id}' --base main"
+    - "gh pr merge --auto --squash --delete-branch"
 
 executor:
   type: claude                         # optional, default "claude" — or "codex"

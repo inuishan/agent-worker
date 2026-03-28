@@ -13,7 +13,7 @@ Developers waste time on repetitive, well-scoped tickets that an AI agent could 
 ## Functional Requirements
 <requirements>
 - FR-01: The worker runs as a persistent loop on a local machine, polling Linear at a configurable interval (default 60 seconds).
-- FR-02: The worker queries Linear for tickets in a configured project that have a configurable "ready" status (e.g. "Todo", "Ready"). No label is required.
+- FR-02: The worker queries Linear for tickets in a configured project that have a configurable "ready" status (e.g. "Todo", "Ready"), with optional assignee and blocked/unblocked filters.
 - FR-03: The worker picks up one ticket at a time. Ticket selection is arbitrary (first returned by the API).
 - FR-04: When a ticket is picked up, the worker atomically transitions it to "In Progress" before any other processing.
 - FR-05: Before dispatching to Claude Code, the worker executes an ordered list of pre-hook shell commands sequentially in the configured repo directory.
@@ -28,7 +28,7 @@ Developers waste time on repetitive, well-scoped tickets that an AI agent could 
 - FR-13: Claude Code execution has a configurable timeout (default 300 seconds). Exceeding the timeout is treated as a failure.
 - FR-14: Task retries are configurable from 0 (default) to 3. When retries are exhausted, the ticket is marked failed.
 - FR-15: The worker reads its Linear API key from the `LINEAR_API_KEY` environment variable.
-- FR-16: The worker accepts a single configuration file (YAML) defining: project ID, status names (ready, in_progress, done, failed), poll interval, repo path, pre-hooks, required post-hooks, optional post-hooks, Claude Code timeout, and retry count.
+- FR-16: The worker accepts a single configuration file (YAML) defining: project ID, status names (ready, in_progress, done, failed), optional pickup filters, poll interval, repo path, pre-hooks, required post-hooks, optional post-hooks, Claude Code timeout, and retry count.
 - FR-17: The worker runs continuously until manually stopped (e.g. Ctrl-C / SIGINT / SIGTERM).
 - FR-18: If the worker process crashes mid-task, the ticket remains in "In Progress" (no cleanup attempt).
 </requirements>
@@ -46,7 +46,7 @@ Developers waste time on repetitive, well-scoped tickets that an AI agent could 
 </nfr>
 
 ## Out of Scope
-- GitHub/GitLab PR creation — handled by optional post-hooks or manually.
+- GitHub/GitLab PR creation or merge orchestration as first-class workflow logic — handled by optional post-hooks or manually.
 - Multiple parallel workers processing tickets concurrently.
 - Remote/VPS deployment or hosted service mode.
 - Web UI or dashboard.

@@ -72,6 +72,10 @@ linear:
     in_progress: "In Progress"        # Status set when the agent claims a ticket
     done: "Done"                      # Status set on success
     failed: "Canceled"                # Status set on failure
+  filters:
+    assignee_name: "Codex"            # Optional: only pick tickets assigned to this Linear user/app
+    assignee_is_app: true             # Optional: require the assignee to be a Linear app user
+    unblocked_only: true              # Optional: only pick tickets with no blocking issue
 
 repo:
   path: "/path/to/your/repo"          # Absolute path to the working repository
@@ -87,6 +91,7 @@ hooks:
     - "git push origin {branch}"
   post_optional:                      # Best-effort commands; failures do not fail the task
     - "gh pr create --title '{id}: {raw_title}' --body 'Fixes {id}. Implemented by Agent Worker.' --base main"
+    - "gh pr merge --auto --squash --delete-branch"
 
 executor:
   type: claude                        # Agent harness: "claude" or "codex"
@@ -105,6 +110,12 @@ Hook commands support variable interpolation:
 | `{title}` | Slugified ticket title (e.g. `add-login-page`) |
 | `{raw_title}` | Original ticket title, sanitized for shell safety (e.g. `Add login page`) |
 | `{branch}` | Generated branch name (`agent/task-{id}`) |
+
+Ticket selection can also be narrowed with `linear.filters`:
+
+- `assignee_name` limits pickup to issues assigned to a matching Linear user or app name.
+- `assignee_is_app: true` ensures the assignee is a Linear app user, which is useful for the Codex app case.
+- `unblocked_only: true` excludes issues that currently have blocking relations.
 
 ## Usage
 
@@ -147,6 +158,7 @@ hooks:
     - "git push origin {branch}"
   post_optional:
     - "gh pr create --title '{id}: {raw_title}' --body 'Fixes {id}.' --base main"
+    - "gh pr merge --auto --squash --delete-branch"
 ```
 
 If the agent produces no repository changes, agent-worker skips post-hooks and still marks the task successful. This is useful for review-only or reporting tasks such as checking test coverage.
@@ -230,6 +242,10 @@ linear:
     in_progress: "In Progress"
     done: "Done"
     failed: "Canceled"
+  filters:
+    assignee_name: "Codex"
+    assignee_is_app: true
+    unblocked_only: true
 
 repo:
   path: "/path/to/your/repo"
@@ -242,6 +258,7 @@ hooks:
     - "git push origin {branch}"
   post_optional:
     - "gh pr create --title '{id}: {raw_title}' --body 'Fixes {id}.' --base main"
+    - "gh pr merge --auto --squash --delete-branch"
 
 executor:
   type: claude

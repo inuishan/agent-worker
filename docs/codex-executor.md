@@ -49,6 +49,10 @@ linear:
     in_progress: "In Progress"
     done: "Done"
     failed: "Canceled"
+  filters:
+    assignee_name: "Codex"
+    assignee_is_app: true
+    unblocked_only: true
 
 repo:
   path: "/path/to/your/repo"
@@ -62,6 +66,7 @@ hooks:
     - "git push origin {branch}"
   post_optional:
     - "gh pr create --title '{id}: {raw_title}' --body 'Fixes {id}. Implemented by Agent Worker.' --base main"
+    - "gh pr merge --auto --squash --delete-branch"
 
 executor:
   type: codex              # Use the Codex executor

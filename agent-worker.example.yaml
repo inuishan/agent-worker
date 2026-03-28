@@ -18,6 +18,14 @@ linear:
     done: "Done"             # Status set when the agent completes a ticket
     failed: "Canceled"       # Status set when the agent fails a ticket
 
+  filters:
+    # Optional: only pick tickets assigned to this Linear user/app name
+    assignee_name: "Codex"
+    # Optional: require that the assignee is a Linear app user
+    assignee_is_app: true
+    # Optional: only pick tickets that are not blocked by other issues
+    unblocked_only: true
+
 repo:
   # Absolute path to the git repository the agent works in (required)
   path: "/path/to/your/repo"
@@ -41,6 +49,8 @@ hooks:
   # Failures are logged but do not fail the task. Useful for PR creation.
   post_optional:
     - "gh pr create --title '{id}: {raw_title}' --body 'Fixes {id}. Implemented by Agent Worker.' --base main"
+    # Optional: enable auto-merge after the PR is created
+    - "gh pr merge --auto --squash --delete-branch"
 
 executor:
   # Agent harness to use: "claude" (default) or "codex"

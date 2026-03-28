@@ -9,10 +9,17 @@ const StatusesSchema = z.object({
   failed: z.string(),
 });
 
+const LinearFiltersSchema = z.object({
+  assignee_name: z.string().optional(),
+  assignee_is_app: z.boolean().optional(),
+  unblocked_only: z.boolean().default(false),
+}).default({ unblocked_only: false });
+
 const LinearSchema = z.object({
   project_id: z.string(),
   poll_interval_seconds: z.number().positive().default(60),
   statuses: StatusesSchema,
+  filters: LinearFiltersSchema,
 });
 
 const RepoSchema = z.object({
