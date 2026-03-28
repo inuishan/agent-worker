@@ -13,7 +13,7 @@ Developers waste time on repetitive, well-scoped tickets that an AI agent could 
 ## Functional Requirements
 <requirements>
 - FR-01: The worker runs as a persistent loop on a local machine, polling Linear at a configurable interval (default 60 seconds).
-- FR-02: The worker queries Linear for tickets in a configured project that have a configurable "ready" status (e.g. "Todo", "Ready"), with optional assignee and blocked/unblocked filters.
+- FR-02: The worker queries Linear for tickets in a configured project that have a configurable "ready" status (e.g. "Todo", "Ready"), with optional assignee, subscriber, and blocked/unblocked filters.
 - FR-03: The worker picks up one ticket at a time. Ticket selection is arbitrary (first returned by the API).
 - FR-04: When a ticket is picked up, the worker atomically transitions it to "In Progress" before any other processing.
 - FR-05: Before dispatching to Claude Code, the worker executes an ordered list of pre-hook shell commands sequentially in the configured repo directory.

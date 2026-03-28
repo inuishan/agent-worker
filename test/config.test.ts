@@ -66,6 +66,8 @@ linear:
   filters:
     assignee_name: "Codex"
     assignee_is_app: true
+    subscriber_name: "Codex"
+    subscriber_is_app: true
     unblocked_only: true
 repo:
   path: "/home/user/project"
@@ -90,6 +92,8 @@ log:
     expect(config.linear.filters).toEqual({
       assignee_name: "Codex",
       assignee_is_app: true,
+      subscriber_name: "Codex",
+      subscriber_is_app: true,
       unblocked_only: true,
     });
     expect(config.hooks.pre).toEqual(["git pull", "git checkout -b feature"]);

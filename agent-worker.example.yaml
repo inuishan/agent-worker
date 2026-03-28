@@ -20,9 +20,13 @@ linear:
 
   filters:
     # Optional: only pick tickets assigned to this Linear user/app name
-    assignee_name: "Codex"
+    assignee_name: "Ishan Jain"
     # Optional: require that the assignee is a Linear app user
-    assignee_is_app: true
+    # assignee_is_app: true
+    # Optional: only pick tickets where this Linear user/app is subscribed
+    subscriber_name: "Codex"
+    # Optional: require that the subscriber is a Linear app user
+    subscriber_is_app: true
     # Optional: only pick tickets that are not blocked by other issues
     unblocked_only: true
 

@@ -73,8 +73,9 @@ linear:
     done: "Done"                      # Status set on success
     failed: "Canceled"                # Status set on failure
   filters:
-    assignee_name: "Codex"            # Optional: only pick tickets assigned to this Linear user/app
-    assignee_is_app: true             # Optional: require the assignee to be a Linear app user
+    assignee_name: "Ishan Jain"       # Optional: only pick tickets assigned to this Linear user/app
+    subscriber_name: "Codex"          # Optional: only pick tickets subscribed by this Linear user/app
+    subscriber_is_app: true           # Optional: require the subscriber to be a Linear app user
     unblocked_only: true              # Optional: only pick tickets with no blocking issue
 
 repo:
@@ -114,7 +115,9 @@ Hook commands support variable interpolation:
 Ticket selection can also be narrowed with `linear.filters`:
 
 - `assignee_name` limits pickup to issues assigned to a matching Linear user or app name.
-- `assignee_is_app: true` ensures the assignee is a Linear app user, which is useful for the Codex app case.
+- `assignee_is_app: true` ensures the assignee is a Linear app user.
+- `subscriber_name` limits pickup to issues where a matching Linear user or app is subscribed.
+- `subscriber_is_app: true` ensures the matching subscriber is a Linear app user, which is useful for the Codex app case.
 - `unblocked_only: true` excludes issues that currently have blocking relations.
 
 ## Usage
@@ -243,8 +246,9 @@ linear:
     done: "Done"
     failed: "Canceled"
   filters:
-    assignee_name: "Codex"
-    assignee_is_app: true
+    assignee_name: "Ishan Jain"
+    subscriber_name: "Codex"
+    subscriber_is_app: true
     unblocked_only: true
 
 repo:

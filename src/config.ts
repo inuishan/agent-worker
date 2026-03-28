@@ -12,6 +12,8 @@ const StatusesSchema = z.object({
 const LinearFiltersSchema = z.object({
   assignee_name: z.string().optional(),
   assignee_is_app: z.boolean().optional(),
+  subscriber_name: z.string().optional(),
+  subscriber_is_app: z.boolean().optional(),
   unblocked_only: z.boolean().default(false),
 }).default({ unblocked_only: false });
 

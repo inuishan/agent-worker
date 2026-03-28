@@ -50,8 +50,9 @@ linear:
     done: "Done"
     failed: "Canceled"
   filters:
-    assignee_name: "Codex"
-    assignee_is_app: true
+    assignee_name: "Ishan Jain"
+    subscriber_name: "Codex"
+    subscriber_is_app: true
     unblocked_only: true
 
 repo:

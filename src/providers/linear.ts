@@ -43,6 +43,8 @@ export function createLinearProvider(options: {
   filters: {
     assignee_name?: string;
     assignee_is_app?: boolean;
+    subscriber_name?: string;
+    subscriber_is_app?: boolean;
     unblocked_only: boolean;
   };
   client?: Pick<LinearClient, "issues" | "issue" | "team" | "updateIssue" | "createComment">;
@@ -73,6 +75,20 @@ export function createLinearProvider(options: {
                 ...(options.filters.assignee_is_app !== undefined
                   ? { app: { eq: options.filters.assignee_is_app } }
                   : {}),
+              },
+            }
+          : {}),
+        ...(options.filters.subscriber_name || options.filters.subscriber_is_app !== undefined
+          ? {
+              subscribers: {
+                some: {
+                  ...(options.filters.subscriber_name
+                    ? { name: { eq: options.filters.subscriber_name } }
+                    : {}),
+                  ...(options.filters.subscriber_is_app !== undefined
+                    ? { app: { eq: options.filters.subscriber_is_app } }
+                    : {}),
+                },
               },
             }
           : {}),

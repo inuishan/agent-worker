@@ -2,7 +2,7 @@ import { describe, test, expect } from "bun:test";
 import { createLinearProvider } from "../src/providers/linear.ts";
 
 describe("createLinearProvider", () => {
-  test("filters ready issues by assignee and unblocked status", async () => {
+  test("filters ready issues by assignee, subscriber, and unblocked status", async () => {
     let receivedFilter: unknown;
     const provider = createLinearProvider({
       apiKey: "test-key",
@@ -16,6 +16,8 @@ describe("createLinearProvider", () => {
       filters: {
         assignee_name: "Codex",
         assignee_is_app: true,
+        subscriber_name: "Codex",
+        subscriber_is_app: true,
         unblocked_only: true,
       },
       client: {
@@ -55,6 +57,12 @@ describe("createLinearProvider", () => {
       assignee: {
         name: { eq: "Codex" },
         app: { eq: true },
+      },
+      subscribers: {
+        some: {
+          name: { eq: "Codex" },
+          app: { eq: true },
+        },
       },
       hasBlockedByRelations: { eq: false },
     });
